@@ -182,7 +182,7 @@ func (c *ClientTransportPoolRandom) TryTransportForF(cb func(*ApiClientTransport
 			return result, err
 		}
 
-		if !errorIndicatesControllerSwap(err) {
+		if !ErrorIndicatesControllerSwap(err) {
 			pfxlog.Logger().WithError(err).Debugf("determined that error (%T) does not indicate controller swap, returning error", err)
 			return result, err
 		}
@@ -243,7 +243,7 @@ var _ ClientTransportPool = (*ClientTransportPoolRandom)(nil)
 
 var opError = &net.OpError{}
 
-func errorIndicatesControllerSwap(err error) bool {
+func ErrorIndicatesControllerSwap(err error) bool {
 	pfxlog.Logger().WithError(err).Debugf("checking for network errror on type (%T) and its wrapped errors", err)
 
 	if errors.As(err, &opError) {
