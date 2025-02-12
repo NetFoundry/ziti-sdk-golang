@@ -299,9 +299,25 @@ func enrollUpdb(username, password string, token *ziti.EnrollmentClaims, caPool 
 		_, _ = body.Set(username, "username")
 	}
 
-	resp, err := client.Post(token.EnrolmentUrl(), "application/json", bytes.NewBuffer(body.EncodeJSON()))
+	enrollmentUrls := token.EnrolmentUrls()
+
+	var resp *http.Response
+	var err error
+	for _, enrollmentUrl := range enrollmentUrls {
+		resp, err = client.Post(enrollmentUrl, "application/json", bytes.NewBuffer(body.EncodeJSON()))
+
+		if err != nil {
+			continue
+		}
+
+	}
+
 	if err != nil {
 		return err
+	}
+
+	if resp == nil {
+		return errors.New("enrollment returned empty response")
 	}
 
 	if resp.StatusCode == http.StatusOK {
@@ -349,9 +365,25 @@ func enrollOTT(token *ziti.EnrollmentClaims, cfg *ziti.Config, caPool *x509.Cert
 			Proxy: http.ProxyFromEnvironment,
 		},
 	}
-	resp, err := client.Post(token.EnrolmentUrl(), "application/x-pem-file", bytes.NewReader(csrPem))
+
+	enrollmentUrls := token.EnrolmentUrls()
+
+	var resp *http.Response
+	for _, enrollmentUrl := range enrollmentUrls {
+		resp, err = client.Post(enrollmentUrl, "application/x-pem-file", bytes.NewReader(csrPem))
+
+		if err != nil {
+			continue
+		}
+
+	}
+
 	if err != nil {
 		return err
+	}
+
+	if resp == nil {
+		return errors.New("enrollment returned empty response")
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -431,9 +463,25 @@ func enrollCA(token *ziti.EnrollmentClaims, cfg *ziti.Config, caPool *x509.CertP
 				Proxy: http.ProxyFromEnvironment,
 			},
 		}
-		resp, err := client.Post(token.EnrolmentUrl(), "text/plain", bytes.NewReader([]byte{}))
+
+		enrollmentUrls := token.EnrolmentUrls()
+
+		var resp *http.Response
+		for _, enrollmentUrl := range enrollmentUrls {
+			resp, err = client.Post(enrollmentUrl, "text/plain", bytes.NewReader([]byte{}))
+
+			if err != nil {
+				continue
+			}
+
+		}
+
 		if err != nil {
 			return err
+		}
+
+		if resp == nil {
+			return errors.New("enrollment returned empty response")
 		}
 
 		if resp.StatusCode != http.StatusOK {
@@ -481,9 +529,24 @@ func enrollCAAuto(enFlags EnrollmentFlags, cfg *ziti.Config, caPool *x509.CertPo
 			postBody = pb
 		}
 
-		resp, postErr := client.Post(enFlags.Token.EnrolmentUrl(), "application/json", bytes.NewReader(postBody))
-		if postErr != nil {
-			return postErr
+		enrollmentUrls := enFlags.Token.EnrolmentUrls()
+
+		var resp *http.Response
+		for _, enrollmentUrl := range enrollmentUrls {
+			resp, err = client.Post(enrollmentUrl, "application/json", bytes.NewReader(postBody))
+
+			if err != nil {
+				continue
+			}
+
+		}
+
+		if err != nil {
+			return err
+		}
+
+		if resp == nil {
+			return errors.New("enrollment returned empty response")
 		}
 
 		if resp.StatusCode != http.StatusOK {

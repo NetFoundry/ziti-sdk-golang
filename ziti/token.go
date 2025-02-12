@@ -35,11 +35,27 @@ type Versions struct {
 type EnrollmentClaims struct {
 	jwt.RegisteredClaims
 	EnrollmentMethod string            `json:"em"`
-	Controllers      []string          `json:"ctrls"`
+	ClientApis       []string          `json:"clientApis,omitempty"`
+	CtrlAddresses    []string          `json:"ctrlAddrs,omitempty"`
 	SignatureCert    *x509.Certificate `json:"-"`
 }
 
-func (t *EnrollmentClaims) EnrolmentUrl() string {
+func (t *EnrollmentClaims) EnrolmentUrls() []string {
+	enrollmentUrls := t.EnrollmentUrlsFromApis()
+
+	if len(enrollmentUrls) == 0 {
+		issuerEnrolmentUrl := t.EnrollmentUrlFromIssuer()
+
+		if issuerEnrolmentUrl != "" {
+			enrollmentUrls = append(enrollmentUrls, issuerEnrolmentUrl)
+
+		}
+	}
+
+	return enrollmentUrls
+}
+
+func (t *EnrollmentClaims) EnrollmentUrlFromIssuer() string {
 	enrollmentUrl, err := url.Parse(t.Issuer)
 
 	if err != nil {
@@ -58,4 +74,27 @@ func (t *EnrollmentClaims) EnrolmentUrl() string {
 	enrollmentUrl.RawQuery = query.Encode()
 
 	return enrollmentUrl.String()
+}
+
+func (t *EnrollmentClaims) EnrollmentUrlsFromApis() []string {
+	var enrollmentUrls []string
+	for _, api := range t.ClientApis {
+		enrollmentUrl, err := url.Parse(api)
+
+		if err != nil {
+			pfxlog.Logger().WithError(err).WithField("url", api).Errorf("could not parse client API as URL to form enrollment URL, skipping")
+			continue
+		}
+
+		enrollmentUrl = enrollmentUrl.ResolveReference(EnrollUrl)
+
+		query := enrollmentUrl.Query()
+		query.Add("method", t.EnrollmentMethod)
+		query.Add("token", t.ID)
+		enrollmentUrl.RawQuery = query.Encode()
+
+		enrollmentUrls = append(enrollmentUrls, enrollmentUrl.String())
+	}
+
+	return enrollmentUrls
 }
