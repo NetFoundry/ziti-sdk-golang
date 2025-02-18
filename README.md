@@ -278,6 +278,10 @@ should not be necessary. This SDK provides a wrapper around the generated client
 
 #### Example: Creating an Edge Management API Client
 ```golang
+func emptyTotpCallback(ch chan string) {
+	ch <- "" // Send an empty string
+	close(ch)
+}
 
 apiUrl, _ = url.Parse("https://localhost:1280/edge/management/v1") 
 
@@ -294,7 +298,10 @@ credentials.CaPool = caPool
 
 //Note: the CA pool can be provided here or during the Authenticate(<creds>) call. It is allowed here to enable
 //      calls to REST API endpoints that do not require authentication.
-managementClient := edge_apis.NewManagementApiClient(apiUrl, credentials.GetCaPool()),
+var apiUrls []*url.URL
+apiUrls = append(apiUrls, apiUrl)
+
+managementClient := edge_apis.NewManagementApiClient(apiUrls, credentials.GetCaPool(), emptyTotpCallback)),
 
 //"configTypes" are string identifiers of configuration that can be requested by clients. Developers may
 //specify their own in order to provide distributed identity and/or service specific configurations.
@@ -324,7 +331,7 @@ credentials.CaPool = caPool
 
 //Note: the CA pool can be provided here or during the Authenticate(<creds>) call. It is allowed here to enable
 //      calls to REST API endpoints that do not require authentication.
-client := edge_apis.NewClientApiClient(apiUrl, credentials.GetCaPool()),
+client := edge_apis.NewClientApiClient(apiUrl, credentials.GetCaPool(), ),
 
 //"configTypes" are string identifiers of configuration that can be requested by clients. Developers may
 //specify their own in order to provide distributed identity and/or service specific configurations. The
